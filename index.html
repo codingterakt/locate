@@ -3,95 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yo'l bo'ylab masofa hisoblash</title>
+    <title>Real-time Location Tracking</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            margin-top: 50px;
-            background-color: #f9f9f9;
-            color: #333;
+            margin-top: 20px;
         }
 
-        h1 {
-            color: #4CAF50;
+        #map {
+            height: 500px;
+            width: 100%;
         }
 
-        #distance-display {
+        #distance {
             font-size: 24px;
             margin-top: 20px;
             color: #333;
         }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            color: #fff;
-            background-color: #4CAF50;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
-        #map {
-            height: 400px;
-            width: 100%;
-            margin-top: 20px;
-        }
     </style>
 </head>
 <body>
-    <h1>Yo'l bo'ylab masofa hisoblash</h1>
-    <div id="distance-display">Masofa: <span id="distance">...</span></div>
-    <button onclick="calculateRoute()">Masofani hisoblash</button>
-
+    <h1>Real-time Location Tracking</h1>
     <div id="map"></div>
+    <div id="distance">Masofa: ...</div>
 
-    <!-- Google Maps API (kalitni o'zingizning kalitingiz bilan almashtiring) -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=directions&v=weekly" async defer></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
+    <!-- Google Maps API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=geometry&v=weekly" async defer></script>
 
     <script>
-        let map;
-        let directionsService;
-        let directionsRenderer;
+        // Firebase config (o'zingizning Firebase loyihangizdan olishingiz kerak)
+        const firebaseConfig = {
+            apiKey: "YOUR_FIREBASE_API_KEY",
+            authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+            databaseURL: "YOUR_FIREBASE_DATABASE_URL",
+            projectId: "YOUR_FIREBASE_PROJECT_ID",
+            storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_FIREBASE_SENDER_ID",
+            appId: "YOUR_FIREBASE_APP_ID"
+        };
+
+        // Firebase initializatsiyasi
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let map, userMarker, friendMarker;
+        let userLocation = { lat: 41.2995, lng: 69.2401 };  // Foydalanuvchi joylashuvi (Toshkent uchun misol)
+        let friendLocation = { lat: 52.5200, lng: 13.4050 };  // Do'stning joylashuvi (Berlin uchun misol)
 
         function initMap() {
-            // Harita boshlanishi (Toshkent, O'zbekiston)
-            const start = { lat: 41.2995, lng: 69.2401 }; 
-            const end = { lat: 52.5200, lng: 13.4050 }; // Berlinda
-
             // Xaritani yaratish
             map = new google.maps.Map(document.getElementById("map"), {
                 zoom: 5,
-                center: start
+                center: userLocation
             });
 
-            directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer();
-            directionsRenderer.setMap(map);
+            // Foydalanuvchi uchun marker yaratish
+            userMarker = new google.maps.Marker({
+                position: userLocation,
+                map: map,
+                title: "Siz"
+            });
 
-            // Yo'lni hisoblash uchun "Masofani hisoblash" tugmasi bosilganda
-            window.calculateRoute = function() {
-                const request = {
-                    origin: start,
-                    destination: end,
-                    travelMode: google.maps.TravelMode.DRIVING // Avtomobil uchun
+            // Do'st uchun marker yaratish
+            friendMarker = new google.maps.Marker({
+                position: friendLocation,
+                map: map,
+                title: "Do'stingiz"
+            });
+
+            // Joylashuvni yangilash
+            navigator.geolocation.watchPosition(updateLocation);
+
+            // Firebase'da joylashuvni yangilash
+            function updateLocation(position) {
+                userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
                 };
+                userMarker.setPosition(userLocation);
+                map.setCenter(userLocation);
+                database.ref('users/user1/location').set(userLocation);  // Foydalanuvchi 1 joylashuvi
 
-                directionsService.route(request, function(response, status) {
-                    if (status === google.maps.DirectionsStatus.OK) {
-                        directionsRenderer.setDirections(response);
-                        const distance = response.routes[0].legs[0].distance.text;
-                        document.getElementById("distance").innerText = distance;
-                    } else {
-                        alert("Yo'lni hisoblashda xato yuz berdi: " + status);
-                    }
-                });
-            };
+                calculateDistance();
+            }
+
+            // Firebase'dan do'st joylashuvini olish
+            database.ref('users/user2/location').on('value', function(snapshot) {
+                friendLocation = snapshot.val();
+                friendMarker.setPosition(friendLocation);
+                calculateDistance();
+            });
+        }
+
+        // Masofani hisoblash
+        function calculateDistance() {
+            const userLatLng = new google.maps.LatLng(userLocation.lat, userLocation.lng);
+            const friendLatLng = new google.maps.LatLng(friendLocation.lat, friendLocation.lng);
+
+            const distance = google.maps.geometry.spherical.computeDistanceBetween(userLatLng, friendLatLng);
+            const distanceInKm = (distance / 1000).toFixed(2);
+
+            document.getElementById("distance").innerText = `Masofa: ${distanceInKm} km`;
         }
     </script>
 </body>
