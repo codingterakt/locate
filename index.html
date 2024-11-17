@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masofani hisoblash</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        h1 {
+            color: #4CAF50;
+        }
+
+        #distance-display {
+            font-size: 24px;
+            margin-top: 20px;
+            color: #333;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>LCA</h1>
+    <div id="distance-display">Distans: <span id="distance">...</span> km</div>
+    <button onclick="getLocation()">Count Distanse</button>
+
+    <script>
+        // Havola qilinadigan GPS koordinatalari
+        const targetCoordinates = {
+            lat: 41.2995, // Qizning kengligi (o'zgaruvchi qiymat)
+            lon: 69.2401  // Qizning uzunligi (o'zgaruvchi qiymat)
+        };
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showDistance, showError);
+            } else {
+                alert("Geolocation sizning brauzeringiz tomonidan qo'llab-quvvatlanmaydi.");
+            }
+        }
+
+        function showDistance(position) {
+            const userCoordinates = {
+                lat: position.coords.latitude,
+                lon: position.coords.longitude
+            };
+
+            const distance = calculateDistance(userCoordinates, targetCoordinates);
+            document.getElementById('distance').innerText = distance.toFixed(2);
+        }
+
+        function calculateDistance(coord1, coord2) {
+            const R = 6371; // Yer radiusi (km)
+            const dLat = toRad(coord2.lat - coord1.lat);
+            const dLon = toRad(coord2.lon - coord1.lon);
+
+            const lat1 = toRad(coord1.lat);
+            const lat2 = toRad(coord2.lat);
+
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function toRad(Value) {
+            return Value * Math.PI / 180;
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("Foydalanuvchi joylashuvga ruxsat bermadi.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("Joylashuv ma'lumotlari mavjud emas.");
+                    break;
+                case error.TIMEOUT:
+                    alert("Joylashuv so'rovi vaqti tugadi.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("Noma'lum xato yuz berdi.");
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
