@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masofani hisoblash</title>
+    <title>Yo'l bo'ylab masofa hisoblash</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -36,71 +36,62 @@
         button:hover {
             background-color: #45a049;
         }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
-    <h1>LCA</h1>
-    <div id="distance-display">Distans: <span id="distance">...</span> km</div>
-    <button onclick="getLocation()">Count Distanse</button>
+    <h1>Yo'l bo'ylab masofa hisoblash</h1>
+    <div id="distance-display">Masofa: <span id="distance">...</span></div>
+    <button onclick="calculateRoute()">Masofani hisoblash</button>
+
+    <div id="map"></div>
+
+    <!-- Google Maps API (kalitni o'zingizning kalitingiz bilan almashtiring) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=directions&v=weekly" async defer></script>
 
     <script>
-        // Havola qilinadigan GPS koordinatalari
-        const targetCoordinates = {
-            lat: 41.2995, // Qizning kengligi (o'zgaruvchi qiymat)
-            lon: 69.2401  // Qizning uzunligi (o'zgaruvchi qiymat)
-        };
+        let map;
+        let directionsService;
+        let directionsRenderer;
 
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showDistance, showError);
-            } else {
-                alert("Geolocation sizning brauzeringiz tomonidan qo'llab-quvvatlanmaydi.");
-            }
-        }
+        function initMap() {
+            // Harita boshlanishi (Toshkent, O'zbekiston)
+            const start = { lat: 41.2995, lng: 69.2401 }; 
+            const end = { lat: 52.5200, lng: 13.4050 }; // Berlinda
 
-        function showDistance(position) {
-            const userCoordinates = {
-                lat: position.coords.latitude,
-                lon: position.coords.longitude
+            // Xaritani yaratish
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 5,
+                center: start
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+
+            // Yo'lni hisoblash uchun "Masofani hisoblash" tugmasi bosilganda
+            window.calculateRoute = function() {
+                const request = {
+                    origin: start,
+                    destination: end,
+                    travelMode: google.maps.TravelMode.DRIVING // Avtomobil uchun
+                };
+
+                directionsService.route(request, function(response, status) {
+                    if (status === google.maps.DirectionsStatus.OK) {
+                        directionsRenderer.setDirections(response);
+                        const distance = response.routes[0].legs[0].distance.text;
+                        document.getElementById("distance").innerText = distance;
+                    } else {
+                        alert("Yo'lni hisoblashda xato yuz berdi: " + status);
+                    }
+                });
             };
-
-            const distance = calculateDistance(userCoordinates, targetCoordinates);
-            document.getElementById('distance').innerText = distance.toFixed(2);
-        }
-
-        function calculateDistance(coord1, coord2) {
-            const R = 6371; // Yer radiusi (km)
-            const dLat = toRad(coord2.lat - coord1.lat);
-            const dLon = toRad(coord2.lon - coord1.lon);
-
-            const lat1 = toRad(coord1.lat);
-            const lat2 = toRad(coord2.lat);
-
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return R * c;
-        }
-
-        function toRad(Value) {
-            return Value * Math.PI / 180;
-        }
-
-        function showError(error) {
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    alert("Foydalanuvchi joylashuvga ruxsat bermadi.");
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    alert("Joylashuv ma'lumotlari mavjud emas.");
-                    break;
-                case error.TIMEOUT:
-                    alert("Joylashuv so'rovi vaqti tugadi.");
-                    break;
-                case error.UNKNOWN_ERROR:
-                    alert("Noma'lum xato yuz berdi.");
-                    break;
-            }
         }
     </script>
 </body>
